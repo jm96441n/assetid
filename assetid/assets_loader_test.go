@@ -222,4 +222,3 @@ func TestWithRealFS(t *testing.T) {
 		t.Errorf("Loader.Path() = %v, want %v", got, filepath.Join("/dist", "unknown.js"))
 	}
 }
-

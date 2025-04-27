@@ -142,9 +142,9 @@ func TestCalculateFileHash(t *testing.T) {
 		t.Fatalf("calculateFileHash failed: %v", err)
 	}
 
-	// Check that the hash is 32 characters (MD5)
-	if len(hash) != 32 {
-		t.Errorf("Expected hash length 32, got %d", len(hash))
+	// Check that the hash is 16 characters (FNV-64)
+	if len(hash) != 16 {
+		t.Errorf("Expected hash length 16, got %d", len(hash))
 	}
 
 	// Check that the hash is consistent

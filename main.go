@@ -1,10 +1,10 @@
 package main
 
 import (
-	"crypto/md5"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"log"
 	"os"
@@ -79,7 +79,7 @@ func processAssets(sourceDir, outputDir string) error {
 		// Create fingerprinted filename
 		ext := filepath.Ext(relPath)
 		baseWithoutExt := strings.TrimSuffix(relPath, ext)
-		fingerprintedName := fmt.Sprintf("%s-%s%s", baseWithoutExt, hash[:8], ext)
+		fingerprintedName := fmt.Sprintf("%s-%s%s", baseWithoutExt, hash, ext)
 
 		// Create output path
 		outputPath := filepath.Join(outputDir, fingerprintedName)
@@ -155,12 +155,12 @@ func calculateFileHash(filePath string) (string, error) {
 	}
 	defer file.Close()
 
-	hash := md5.New()
+	hash := fnv.New64a()
 	if _, err := io.Copy(hash, file); err != nil {
 		return "", err
 	}
 
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+	return fmt.Sprintf("%016x", hash.Sum64()), nil
 }
 
 func minifySource(sourceCode []byte) ([]byte, error) {

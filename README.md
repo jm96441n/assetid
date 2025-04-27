@@ -4,11 +4,13 @@ AssetID is a Go-based asset fingerprinting tool and library that helps you manag
 
 ## Features
 
-- File fingerprinting with content-based MD5 hashing
+- File fingerprinting with content-based FNV hashing from the standard library
 - JavaScript minification using tdewolff/minify
+- CSS files are fingerprinted but not minified (preserves formatting and comments)
 - Manifest generation for mapping original filenames to fingerprinted versions
 - Library for resolving fingerprinted assets in Go applications
 - Simple command-line interface for build-time integration
+- Lightweight with minimal dependencies
 
 ## Command Line Usage
 
@@ -35,17 +37,17 @@ Options:
 ### How It Works
 
 1. AssetID processes files in the source directory
-2. Each file is hashed (MD5) based on its content
+2. Each file is hashed using FNV-64a (Fowler-Noll-Vo) based on its content
 3. JavaScript files are minified
-4. Files are saved with fingerprinted names (e.g., `app-a1b2c3d4.js`)
+4. Files are saved with fingerprinted names using the full 16-character hash (e.g., `app-a1b2c3d4e5f67890.js`)
 5. A `manifest.json` file is created in the output directory
 
 Example manifest:
 ```json
 {
   "assets": {
-    "app.js": "app-a1b2c3d4.js",
-    "style.css": "style-e5f6g7h8.css"
+    "app.js": "app-a1b2c3d4e5f67890.js",
+    "style.css": "style-0123456789abcdef.css"
   }
 }
 ```
@@ -83,7 +85,7 @@ func main() {
 
     // Get the fingerprinted path for an asset
     jsPath := loader.Path("app.js")
-    fmt.Println(jsPath) // Output: /dist/app-a1b2c3d4.js
+    fmt.Println(jsPath) // Output: /dist/app-a1b2c3d4e5f67890.js
     
     // Use in a web application
     // http.ServeFile(w, r, "." + jsPath)
