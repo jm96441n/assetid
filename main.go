@@ -90,13 +90,20 @@ func processAssets(sourceDir, outputDir string) error {
 			return fmt.Errorf("failed to create directory %s: %w", outputDir, err)
 		}
 
-		minified, err := minifySource(path)
+		sourceCode, err := openAndReadFile(path)
 		if err != nil {
-			return fmt.Errorf("failed to minify source: %w", err)
+			return fmt.Errorf("failed to read source file %s: %w", path, err)
+		}
+
+		if ext == ".js" {
+			sourceCode, err = minifySource(sourceCode)
+			if err != nil {
+				return fmt.Errorf("failed to minify source: %w", err)
+			}
 		}
 
 		// Copy file to output directory
-		if err := writeMinifiedFile(minified, outputPath); err != nil {
+		if err := writeMinifiedFile(sourceCode, outputPath); err != nil {
 			return fmt.Errorf("failed to write minified file: %w", err)
 		}
 
@@ -127,6 +134,20 @@ func processAssets(sourceDir, outputDir string) error {
 	return nil
 }
 
+func openAndReadFile(src string) ([]byte, error) {
+	source, err := os.Open(src)
+	if err != nil {
+		return nil, err
+	}
+	defer source.Close()
+
+	sourceCode, err := io.ReadAll(source)
+	if err != nil {
+		return nil, err
+	}
+	return sourceCode, nil
+}
+
 func calculateFileHash(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -142,20 +163,9 @@ func calculateFileHash(filePath string) (string, error) {
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }
 
-func minifySource(src string) ([]byte, error) {
+func minifySource(sourceCode []byte) ([]byte, error) {
 	m := minify.New()
 	m.AddFunc("text/javascript", js.Minify)
-
-	source, err := os.Open(src)
-	if err != nil {
-		return nil, err
-	}
-	defer source.Close()
-
-	sourceCode, err := io.ReadAll(source)
-	if err != nil {
-		return nil, err
-	}
 
 	minified, err := m.Bytes("text/javascript", sourceCode)
 	if err != nil {
@@ -172,7 +182,7 @@ func writeMinifiedFile(src []byte, dst string) error {
 	}
 	defer destination.Close()
 
-	err = os.WriteFile(dst, src, 0755)
+	err = os.WriteFile(dst, src, 0644)
 	if err != nil {
 		return err
 	}
