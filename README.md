@@ -27,22 +27,25 @@ This will install the `assetid` binary to your `$GOPATH/bin` directory.
 ### Basic Usage
 
 ```bash
-assetid --source ./src/assets --output ./dist
+assetid --source ./src/assets --output ./dist --minify
 ```
 
 Options:
-- `--source`: Directory containing source assets (default: "src")
-- `--output`: Directory for fingerprinted output files (default: "src")
+
+- `--source`: Directory containing source assets (default: "")
+- `--output`: Directory for fingerprinted output files (default: "")
+- `--minify`: Controls whether to minify JavaScript files (default: false)
 
 ### How It Works
 
 1. AssetID processes files in the source directory
 2. Each file is hashed using FNV-64a (Fowler-Noll-Vo) based on its content
-3. JavaScript files are minified
+3. JavaScript files are minified if argument is specified
 4. Files are saved with fingerprinted names using the full 16-character hash (e.g., `app-a1b2c3d4e5f67890.js`)
 5. A `manifest.json` file is created in the output directory
 
 Example manifest:
+
 ```json
 {
   "assets": {
@@ -86,7 +89,7 @@ func main() {
     // Get the fingerprinted path for an asset
     jsPath := loader.Path("app.js")
     fmt.Println(jsPath) // Output: /dist/app-a1b2c3d4e5f67890.js
-    
+
     // Use in a web application
     // http.ServeFile(w, r, "." + jsPath)
 }
@@ -121,14 +124,14 @@ func main() {
     if err != nil {
         log.Fatalf("Failed to load asset manifest: %v", err)
     }
-    
+
     // Create template with custom function for asset paths
     tmpl := template.New("index").Funcs(template.FuncMap{
         "asset": func(path string) string {
             return assets.Path(path)
         },
     })
-    
+
     // Parse template
     tmpl, err = tmpl.Parse(`
         <!DOCTYPE html>
@@ -144,19 +147,19 @@ func main() {
     if err != nil {
         log.Fatalf("Failed to parse template: %v", err)
     }
-    
+
     // Create app with dependencies
     app := &App{
         assets: assets,
         tmpl:   tmpl,
     }
-    
+
     // Handle requests
     http.HandleFunc("/", app.indexHandler)
-    
+
     // Static file serving
     http.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
-    
+
     log.Println("Server started at http://localhost:8080")
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -186,12 +189,14 @@ Contributions to AssetID are welcome! Here's how you can contribute:
 ### Development Setup
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/jm96441n/assetid.git
    cd assetid
    ```
 
 2. Install dependencies:
+
    ```bash
    go mod download
    ```
@@ -211,3 +216,4 @@ Contributions to AssetID are welcome! Here's how you can contribute:
 ## License
 
 [MIT License](LICENSE)
+

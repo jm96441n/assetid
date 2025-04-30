@@ -1,0 +1,345 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>assetid: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/jm96441n/assetid/assetid/assets_loader.go (100.0%)</option>
+				
+				<option value="file1">github.com/jm96441n/assetid/main.go (74.1%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package assetid
+
+import (
+        "encoding/json"
+        "io/fs"
+        "path/filepath"
+        "sync"
+)
+
+// AssetManifest stores the mapping between original and fingerprinted filenames
+type AssetManifest struct {
+        Assets map[string]string `json:"assets"`
+}
+
+// Loader handles loading and resolving fingerprinted asset paths
+type Loader struct {
+        manifest AssetManifest
+        mu       sync.RWMutex
+}
+
+// NewLoader creates a new asset loader from a manifest file
+func NewLoader(filesys fs.FS, manifestPath string) (*Loader, error) <span class="cov8" title="1">{
+        file, err := filesys.Open(manifestPath)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer file.Close()
+
+        var manifest AssetManifest
+        if err := json.NewDecoder(file).Decode(&amp;manifest); err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return &amp;Loader{
+                manifest: manifest,
+        }, nil</span>
+}
+
+// Path returns the fingerprinted path for a given asset
+func (l *Loader) Path(assetPath string) string <span class="cov8" title="1">{
+        l.mu.RLock()
+        defer l.mu.RUnlock()
+
+        if fingerprinted, ok := l.manifest.Assets[assetPath]; ok </span><span class="cov8" title="1">{
+                return filepath.Join("/dist", fingerprinted)
+        }</span>
+        <span class="cov8" title="1">return filepath.Join("/dist", assetPath)</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "encoding/json"
+        "flag"
+        "fmt"
+        "hash/fnv"
+        "io"
+        "log"
+        "os"
+        "path/filepath"
+        "strings"
+
+        "github.com/tdewolff/minify/v2"
+        "github.com/tdewolff/minify/v2/js"
+)
+
+// AssetManifest stores the mapping between original and fingerprinted filenames
+type AssetManifest struct {
+        Assets map[string]string `json:"assets"`
+}
+
+func main() <span class="cov0" title="0">{
+        var (
+                sourceDir string
+                outputDir string
+        )
+        flag.StringVar(&amp;sourceDir, "source", "src", "Source directory containing assets")
+        flag.StringVar(&amp;outputDir, "output", "src", "Directory to output fingerprinted assets")
+        flag.Parse()
+
+        if err := processAssets(sourceDir, outputDir); err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+}
+
+// processAssets handles fingerprinting, minifying, and manifest generation for assets
+func processAssets(sourceDir, outputDir string) error <span class="cov8" title="1">{
+        // remove dist directory to ensure the only fingerprinted files are the one we need
+        err := os.RemoveAll(outputDir)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to remove dist directory: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">manifestPath := filepath.Join(outputDir, "manifest.json")
+
+        manifest := AssetManifest{
+                Assets: make(map[string]string),
+        }
+
+        // Create output directory if it doesn't exist
+        if err := os.MkdirAll(outputDir, 0755); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to create output directory: %w", err)
+        }</span>
+
+        // Walk through all files in source directory
+        <span class="cov8" title="1">err = filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error </span><span class="cov8" title="1">{
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+
+                // Skip directories
+                <span class="cov8" title="1">if info.IsDir() </span><span class="cov8" title="1">{
+                        return nil
+                }</span>
+
+                // Get relative path
+                <span class="cov8" title="1">relPath, err := filepath.Rel(sourceDir, path)
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to get relative path: %w", err)
+                }</span>
+
+                // Calculate file hash
+                <span class="cov8" title="1">hash, err := calculateFileHash(path)
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to calculate hash for %s: %w", path, err)
+                }</span>
+
+                // Create fingerprinted filename
+                <span class="cov8" title="1">ext := filepath.Ext(relPath)
+                baseWithoutExt := strings.TrimSuffix(relPath, ext)
+                fingerprintedName := fmt.Sprintf("%s-%s%s", baseWithoutExt, hash, ext)
+
+                // Create output path
+                outputPath := filepath.Join(outputDir, fingerprintedName)
+                outputDir := filepath.Dir(outputPath)
+
+                // Ensure output directory exists
+                if err := os.MkdirAll(outputDir, 0755); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to create directory %s: %w", outputDir, err)
+                }</span>
+
+                <span class="cov8" title="1">sourceCode, err := openAndReadFile(path)
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to read source file %s: %w", path, err)
+                }</span>
+
+                <span class="cov8" title="1">if ext == ".js" </span><span class="cov8" title="1">{
+                        sourceCode, err = minifySource(sourceCode)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return fmt.Errorf("failed to minify source: %w", err)
+                        }</span>
+                }
+
+                // Copy file to output directory
+                <span class="cov8" title="1">if err := writeMinifiedFile(sourceCode, outputPath); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to write minified file: %w", err)
+                }</span>
+
+                // Add to manifest
+                <span class="cov8" title="1">manifest.Assets[relPath] = fingerprintedName
+                log.Printf("Processed: %s -&gt; %s", relPath, fingerprintedName)
+
+                return nil</span>
+        })
+        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to process assets: %w", err)
+        }</span>
+
+        // Write manifest file
+        <span class="cov8" title="1">manifestFile, err := os.Create(manifestPath)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to create manifest file: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer manifestFile.Close()
+
+        encoder := json.NewEncoder(manifestFile)
+        encoder.SetIndent("", "  ")
+        if err := encoder.Encode(manifest); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to write manifest: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">log.Printf("Asset manifest written to: %s", manifestPath)
+        return nil</span>
+}
+
+func openAndReadFile(src string) ([]byte, error) <span class="cov8" title="1">{
+        source, err := os.Open(src)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer source.Close()
+
+        sourceCode, err := io.ReadAll(source)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return sourceCode, nil</span>
+}
+
+func calculateFileHash(filePath string) (string, error) <span class="cov8" title="1">{
+        file, err := os.Open(filePath)
+        if err != nil </span><span class="cov8" title="1">{
+                return "", err
+        }</span>
+        <span class="cov8" title="1">defer file.Close()
+
+        hash := fnv.New64a()
+        if _, err := io.Copy(hash, file); err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+
+        <span class="cov8" title="1">return fmt.Sprintf("%016x", hash.Sum64()), nil</span>
+}
+
+func minifySource(sourceCode []byte) ([]byte, error) <span class="cov8" title="1">{
+        m := minify.New()
+        m.AddFunc("text/javascript", js.Minify)
+
+        minified, err := m.Bytes("text/javascript", sourceCode)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return minified, nil</span>
+}
+
+func writeMinifiedFile(src []byte, dst string) error <span class="cov8" title="1">{
+        destination, err := os.Create(dst)
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer destination.Close()
+
+        err = os.WriteFile(dst, src, 0644)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
