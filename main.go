@@ -22,20 +22,22 @@ type AssetManifest struct {
 
 func main() {
 	var (
-		sourceDir string
-		outputDir string
+		sourceDir    string
+		outputDir    string
+		shouldMinify bool
 	)
-	flag.StringVar(&sourceDir, "source", "src", "Source directory containing assets")
-	flag.StringVar(&outputDir, "output", "src", "Directory to output fingerprinted assets")
+	flag.StringVar(&sourceDir, "source", "", "Source directory containing assets")
+	flag.StringVar(&outputDir, "output", "", "Directory to output fingerprinted assets")
+	flag.BoolVar(&shouldMinify, "minify", false, "Control whether to minify JS files")
 	flag.Parse()
 
-	if err := processAssets(sourceDir, outputDir); err != nil {
+	if err := processAssets(sourceDir, outputDir, shouldMinify); err != nil {
 		log.Fatal(err)
 	}
 }
 
 // processAssets handles fingerprinting, minifying, and manifest generation for assets
-func processAssets(sourceDir, outputDir string) error {
+func processAssets(sourceDir, outputDir string, shouldMinify bool) error {
 	// remove dist directory to ensure the only fingerprinted files are the one we need
 	err := os.RemoveAll(outputDir)
 	if err != nil {
@@ -95,7 +97,7 @@ func processAssets(sourceDir, outputDir string) error {
 			return fmt.Errorf("failed to read source file %s: %w", path, err)
 		}
 
-		if ext == ".js" {
+		if ext == ".js" && shouldMinify {
 			sourceCode, err = minifySource(sourceCode)
 			if err != nil {
 				return fmt.Errorf("failed to minify source: %w", err)
